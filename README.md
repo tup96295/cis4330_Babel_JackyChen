@@ -1,4 +1,4 @@
-# cis4330-4360_Babel_JackyChen
+# cis4330_Babel_JackyChen
 A Scalable Pre-trained Model for Multi-Modal Sensing via Expandable Modality Alignment
 Sensors that will be used in the project:
  - Camera – to capture images or video of the environment
