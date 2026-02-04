@@ -1,11 +1,11 @@
 # cis4330-4360_Babel_JackyChen
 A Scalable Pre-trained Model for Multi-Modal Sensing via Expandable Modality Alignment
 Sensors that will be used in the project:
- Camera – to capture images or video of the environment
- Microphone – to capture surrounding sounds
- Accelerometer – to detect movement and motion patterns
- Gyroscope – to detect device orientation and rotation
- GPS – to detect location and movement speed
+ - Camera – to capture images or video of the environment
+ - Microphone – to capture surrounding sounds
+ - Accelerometer – to detect movement and motion patterns
+ - Gyroscope – to detect device orientation and rotation
+ - GPS – to detect location and movement speed
 
 
 Goal: The goal of this project is to create a scaleable, multi-model sensing application that gathers and combines all the data from the sensors to allow for the ability to adapt to the user’s action and environment. Additionally, this application would have the ability to retain information even if a new sensor is added.
