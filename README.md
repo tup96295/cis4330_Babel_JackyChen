@@ -13,3 +13,6 @@ Goal: The goal of this project is to create a scaleable, multi-model sensing app
 Scenario: 
  1.The user goes through his daily routine normally, and while he does all that, the sensor would be gathering data as to what is happening. Over time, the data collected would then be used by the sensors to create a routine to reduce excess activity. An instance can be the gyroscope, used to detect device orientation, is turned off based on the routine or pattern from the data that the sensor gathered. 
  2.Another scenario would be the difference between the user walking/comuting or just lounging. By understanding the routine of when you are commuting and when you might be lounging around, they could control “when might be the best time to send you a notification”. Finally and most importantly, if there is ever a hardware update that adds a new sensor, the pre-existing sensors won’t be affected at all.
+
+
+App: The app that is created utalizes the sensor to track the users movement speed, position and pattern to generate an average time, base on the user data collected, for the user to get from point A to point B in a reasonable time for the user.
