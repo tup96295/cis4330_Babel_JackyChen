@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Marker startMarker, destinationMarker;
     private Polyline routePolyline;
 
-    private static final String API_KEY = "AIzaSyBxjTYNb-ycdxjKvu6Fuz7dsLNVJjqDBLo";
+    private static final String API_KEY = "Key";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
