@@ -1,19 +1,19 @@
 package edu.temple.babelwalks;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.hardware.*;
-import android.location.Address;
-import android.location.Geocoder;
 import android.os.Bundle;
 import android.widget.*;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 
 import com.google.android.gms.maps.*;
 import com.google.android.gms.maps.model.*;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.android.gms.common.api.Status;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -36,15 +36,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private TextView accelView, gyroView, stepView, speedView, resultView;
     private Button calculateBtn;
-    private EditText startInput, destinationInput;
-
-    private MLModel mlModel;
 
     private GoogleMap mMap;
     private Marker startMarker, destinationMarker;
     private Polyline routePolyline;
 
-    private static final String API_KEY = "Key";
+    private LatLng startLatLng, destLatLng;
+    private AppDB db;
+
+    private static final String API_KEY = "AIzaSyCitZJRKVo0c8aL4TzOpymjTYCNwkPMW5U"; //unrestricted key
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,8 +57,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         speedView = findViewById(R.id.speedView);
         resultView = findViewById(R.id.resultView);
         calculateBtn = findViewById(R.id.calculateBtn);
-        startInput = findViewById(R.id.startInput);
-        destinationInput = findViewById(R.id.destinationInput);
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
@@ -66,7 +64,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
 
-        mlModel = new MLModel(getAssets());
         startTime = System.currentTimeMillis();
 
         SupportMapFragment mapFragment =
@@ -74,7 +71,58 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         mapFragment.getMapAsync(this);
 
+        if (!Places.isInitialized()) {
+            Places.initialize(getApplicationContext(), "AIzaSyA8Wd6KGyBXMvrq00PFX9fiLUpnfQaUifU");//Map Api_key
+        }
+
+        AutocompleteSupportFragment startFrag =
+                (AutocompleteSupportFragment) getSupportFragmentManager()
+                        .findFragmentById(R.id.start_autocomplete);
+
+        AutocompleteSupportFragment destFrag =
+                (AutocompleteSupportFragment) getSupportFragmentManager()
+                        .findFragmentById(R.id.dest_autocomplete);
+
+        startFrag.setPlaceFields(Arrays.asList(Place.Field.NAME, Place.Field.LAT_LNG));
+        destFrag.setPlaceFields(Arrays.asList(Place.Field.NAME, Place.Field.LAT_LNG));
+
+        startFrag.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                startLatLng = place.getLatLng();
+                if (startMarker != null) startMarker.remove();
+                startMarker = mMap.addMarker(new MarkerOptions().position(startLatLng).title(place.getName()));
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(startLatLng, 12));
+            }
+
+            @Override
+            public void onError(Status status) {
+                resultView.setText("Start error: " + status.getStatusMessage());
+            }
+        });
+
+        destFrag.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                destLatLng = place.getLatLng();
+                if (destinationMarker != null) destinationMarker.remove();
+                destinationMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title(place.getName()));
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(destLatLng, 12));
+            }
+
+            @Override
+            public void onError(Status status) {
+                resultView.setText("Dest error: " + status.getStatusMessage());
+            }
+        });
+
         calculateBtn.setOnClickListener(v -> fetchRoute());
+
+        db = androidx.room.Room.databaseBuilder(
+                getApplicationContext(),
+                AppDB.class,
+                "sensor-db"
+        ).allowMainThreadQueries().build();
     }
 
     @Override
@@ -116,84 +164,59 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         updateSpeed();
+        SensorData data = new SensorData();
+        data.accel = accelMagnitude;
+        data.gyro = gyroMagnitude;
+        data.steps = stepCount;
+        data.speed = 0.90f;
+        data.timestamp = System.currentTimeMillis();
+
+        db.sensorDataDao().insert(data);
     }
 
     private void updateSpeed() {
-        long currentTime = System.currentTimeMillis();
-        float elapsedSeconds = (currentTime - startTime) / 1000f;
-
-        float[] input = new float[]{
-                accelMagnitude,
-                gyroMagnitude,
-                stepCount,
-                elapsedSeconds
-        };
-
-        float speed = mlModel.predict(input);
+        float speed = 0.90f;
         speedView.setText("Speed: " + speed + " m/s");
     }
+    //private void updateSpeed() {
+        //long currentTime = System.currentTimeMillis();
+        //float elapsedSeconds = (currentTime - startTime) / 1000f;
+
+        //if (elapsedSeconds == 0) return;
+
+        //float stepsPerSecond = stepCount / elapsedSeconds;
+        //float strideLength = 0.75f;
+
+        //float speed = stepsPerSecond * strideLength;
+
+        //speedView.setText("Speed: " + speed + " m/s");
+    //}
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
     }
 
-    private LatLng geocode(String text) throws Exception {
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-        List<Address> list = geocoder.getFromLocationName(text + ", Philadelphia", 1);
-
-        if (list == null || list.isEmpty()) return null;
-
-        return new LatLng(
-                list.get(0).getLatitude(),
-                list.get(0).getLongitude()
-        );
-    }
-
     private void fetchRoute() {
 
-        String startText = startInput.getText().toString();
-        String destText = destinationInput.getText().toString();
-
-        if (startText.isEmpty() || destText.isEmpty()) {
-            resultView.setText("Enter both addresses");
+        if (startLatLng == null || destLatLng == null) {
+            resultView.setText("Select both locations");
             return;
         }
 
-        try {
-            LatLng start = geocode(startText);
-            LatLng dest = geocode(destText);
+        String url = "https://maps.googleapis.com/maps/api/directions/json?"
+                + "origin=" + startLatLng.latitude + "," + startLatLng.longitude
+                + "&destination=" + destLatLng.latitude + "," + destLatLng.longitude
+                + "&mode=walking&key=" + API_KEY;
 
-            if (start == null || dest == null) {
-                resultView.setText("Address not found");
-                return;
+        new Thread(() -> {
+            try {
+                String json = downloadUrl(url);
+                runOnUiThread(() -> parseRoute(json));
+            } catch (Exception e) {
+                runOnUiThread(() -> resultView.setText("Network error"));
             }
-
-            if (startMarker != null) startMarker.remove();
-            if (destinationMarker != null) destinationMarker.remove();
-
-            startMarker = mMap.addMarker(new MarkerOptions().position(start).title("Start"));
-            destinationMarker = mMap.addMarker(new MarkerOptions().position(dest).title("Destination"));
-
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(start, 12));
-
-            String url = "https://maps.googleapis.com/maps/api/directions/json?"
-                    + "origin=" + start.latitude + "," + start.longitude
-                    + "&destination=" + dest.latitude + "," + dest.longitude
-                    + "&mode=walking&key=" + API_KEY;
-
-            new Thread(() -> {
-                try {
-                    String json = downloadUrl(url);
-                    runOnUiThread(() -> parseRoute(json));
-                } catch (Exception e) {
-                    runOnUiThread(() -> resultView.setText("Network error"));
-                }
-            }).start();
-
-        } catch (Exception e) {
-            resultView.setText("Geocoding error");
-        }
+        }).start();
     }
 
     private String downloadUrl(String strUrl) throws Exception {
@@ -277,19 +300,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         float distanceMiles = (float) (distanceMeters * 0.000621371);
 
-        long currentTime = System.currentTimeMillis();
-        float elapsedSeconds = (currentTime - startTime) / 1000f;
+        float speed = 0.90f; //remove this and uncomment the following code for sensor data
 
-        float[] input = new float[]{
-                accelMagnitude,
-                gyroMagnitude,
-                stepCount,
-                elapsedSeconds
-        };
+        //long currentTime = System.currentTimeMillis();
+        //float elapsedSeconds = (currentTime - startTime) / 1000f;
 
-        float speed = mlModel.predict(input);
+        //if (elapsedSeconds == 0) return;
 
-        if (speed <= 0) return;
+        //float stepsPerSecond = stepCount / elapsedSeconds;
+        //float strideLength = 0.75f;
+
+        //float speed = stepsPerSecond * strideLength;
 
         float timeMinutes = (float) ((distanceMeters / speed) / 60);
 

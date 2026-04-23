@@ -32,33 +32,25 @@
 
     </androidx.cardview.widget.CardView>
 
-    <EditText
-        android:id="@+id/startInput"
-        android:hint="Start address"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#AAAAAA"
-        android:background="#1E1E1E"
-        android:padding="10dp"
-        android:layout_marginBottom="8dp"
+    <fragment
+        android:id="@+id/start_autocomplete"
+        android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
-    <EditText
-        android:id="@+id/destinationInput"
-        android:hint="Destination address"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#AAAAAA"
-        android:background="#1E1E1E"
-        android:padding="10dp"
-        android:layout_marginBottom="10dp"
+    <fragment
+        android:id="@+id/dest_autocomplete"
+        android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"/>
 
     <Button
         android:id="@+id/calculateBtn"
         android:text="Calculate Route"
         android:backgroundTint="#3F51B5"
         android:textColor="#FFFFFF"
+        android:layout_marginTop="10dp"
         android:layout_marginBottom="12dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
